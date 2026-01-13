@@ -156,7 +156,6 @@ if st.session_state["authentication_status"]:
     # Cria a sub-lista (Apenas os 5 itens da vez)
     lote_atual_nec = st.session_state.pedidos[inicio_nec:fim_nec]
 
-
     with col_pag:
     # Mostra em qual página estamos
         st.caption(f"Mostrando {len(lote_atual_nec)} de {total_itens_nec} itens encontrados.")
@@ -198,7 +197,7 @@ if st.session_state["authentication_status"]:
         with st.form("carrinho"):
             for id, item_comprado in enumerate(lista_filtrada_nec):
 
-                col1, col2, col3, col4 = st.columns([0.5, 0.166, 0.166, 0.166])
+                col1, col2, col3, col4, col5 = st.columns([0.3, 0.175, 0.175, 0.175, 0.175])
 
                 pendencia = 'pendente'
                 verif = df_pedidos['IDPedCom'].loc[df_pedidos['CodProCOPY'] == item_comprado[0]]
@@ -217,17 +216,20 @@ if st.session_state["authentication_status"]:
                             st.write("Descrição: {}".format(item_nome))
                         else:
                             item_nome = item_nome.values[0]
-                        st.checkbox("Descrição: {}".format(item_nome), key=f"check_{item_comprado[0]}_{id}") 
+                        st.checkbox("Descrição: {}".format(item_nome), key=f"check_{item_comprado[0]}_{id}")
                 with col2:
-
-                    st.write("Código do Produto: {}".format(item_comprado[0]))    
+                    st.write("Un.: {}".format(df_check["Un."].loc[df_check['Cód. Interno'] == item_comprado[0]].values[0])) 
                 with col3:
 
-                    st.write("Quantidade: {:.1f}".format(item_comprado[1]))
+                    st.write("Cód.: {}".format(item_comprado[0]))    
                 with col4:
+
+                    st.write("Quantidade: {:.1f}".format(item_comprado[1]))
+                with col5:
 
                     st.write("{}".format(pendencia))
                 st.write('---')
+
             enviado = st.form_submit_button("Desfazer necessidades selecionadas")
         
         # Caso o botão for selecionado e houver itens selecionados na check box, retornaremos para a aba de seleção de compra
@@ -364,7 +366,7 @@ if st.session_state["authentication_status"]:
             with st.form("Meu formulário de compras"):
                 for item in lote_atual:
 
-                    col1, col2, col3 = st.columns([0.5, 0.3, 0.2])
+                    col1, col2, col3, col4, col5 = st.columns([0.4, 0.16, 0.16, 0.1, 0.26])
 
                     with col1:
                         
@@ -376,9 +378,14 @@ if st.session_state["authentication_status"]:
                             item_nome = item_nome.values[0]
                         st.checkbox(item_nome, key=f"check_{item}")
                     with col2:
-
-                        st.write("Código do Produto: {}".format(item))
-                    with col3:  
+                        st.write("Cód.: {}".format(item))
+                    with col3:
+                        st.write("Un.: {}".format(df_check["Un."].loc[df_check['Cód. Interno'] == item].values[0]))
+                    with col4:
+                        st.caption(":red[Necessário {} para completar o estoque MÍNIMO.]".format(
+                            int(df_check["Estoque Mín."].loc[df_check['Cód. Interno'] == item].values[0]) -
+                                int(df_check["Estoque"].loc[df_check['Cód. Interno'] == item].values[0])))
+                    with col5:  
                         
                         # Alocação de quantidade desejada de compra
                         st.number_input("", min_value=0, step=1, value=0, key=f"slider_{item}")
