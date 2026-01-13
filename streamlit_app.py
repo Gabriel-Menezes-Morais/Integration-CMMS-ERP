@@ -97,6 +97,9 @@ ITENS_POR_PAGINA_NEC = 5
 if 'pagina_atual_nec' not in st.session_state:
     st.session_state.pagina_atual_nec = 0
 
+def resetar_pagina():
+    st.session_state.pagina_atual_nec = 0
+
 # Filtragem para selecionar necessidades específicas
 
 col_pag, col_fil = st.columns([0.78, 0.219])
@@ -130,11 +133,42 @@ with col_pag:
 # Mostra em qual página estamos
     st.caption(f"Mostrando {len(lote_atual_nec)} de {total_itens_nec} itens encontrados.")
 
+    if st.session_state.get("reset_input_busca_nec", False):
+        st.session_state["input_busca_nec"] = ""
+        st.session_state["reset_input_busca_nec"] = False
+
+    col_busca, col_vazia = st.columns([0.5, 0.5])
+    with col_busca:
+        termo_busca_nec = st.text_input(
+            "🔍 Pesquisar Produto",
+            placeholder="Digite o nome ou código...",
+            key="input_busca_nec"
+        )
+
+    if termo_busca_nec:
+        resetar_pagina()
+
+    lista_filtrada_nec = []
+
+    if not termo_busca_nec:
+        lista_filtrada_nec = lote_atual_nec
+    else:
+        termo_nec = termo_busca_nec.lower()
+        logger_info.info(f"Usuário pesquisou por '{termo_busca_nec}' na lista de necessidades.")
+        for item_id, item in lote_atual_nec:
+            # Busca a descrição no DataFrame
+            desc_raw = df_check.loc[df_check['Cód. Interno'] == item_id, "Descrição"]
+            descricao = str(desc_raw.values[0]) if not desc_raw.empty else ""
+            
+            # Verifica se o termo está no ID (convertido p/ texto) OU na Descrição
+            if termo_nec in str(item_id) or termo_nec in descricao.lower():
+                lista_filtrada_nec.append((item_id, item))
+
 if not df_pedidos.empty:
 
     # Tabela de amostragem das necessidades geradas
     with st.form("carrinho"):
-        for id, item_comprado in enumerate(lote_atual_nec):
+        for id, item_comprado in enumerate(lista_filtrada_nec):
 
             col1, col2, col3, col4 = st.columns([0.5, 0.166, 0.166, 0.166])
 
@@ -173,7 +207,7 @@ if not df_pedidos.empty:
         
         itens_para_mover = []
 
-        for id, i in enumerate(lote_atual_nec):
+        for id, i in enumerate(lista_filtrada_nec):
 
             chave_checkbox = f"check_{i[0]}_{id}"
 
@@ -183,6 +217,8 @@ if not df_pedidos.empty:
                 del st.session_state[chave_checkbox]
         # Caso houver itens, retornaremos o item para a lista de necessidades e atualizaremos a tabela do Banco de dados
         if itens_para_mover:
+
+            st.session_state.reset_input_busca_nec = True
 
             st.session_state.necessidades.extend(itens_para_mover)
             deletar_item_carrinho(itens_para_mover)
