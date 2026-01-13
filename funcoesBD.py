@@ -1,4 +1,4 @@
-import pyodbc #MUDAR DEPOIS PARA SQLALCHEMY, POIS PANDAS SOMENTE SUPORTA ELE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+import pyodbc #MUDAR DEPOIS PARA SQLALCHEMY
 import pandas as pd
 from dotenv import load_dotenv
 import os

@@ -1,5 +1,5 @@
 import requests
-from requests import Session, Request
+from requests import Request, Session   
 import pandas as pd
 import os
 import logging
@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 # Valida configurações mínimas
 logger_ALERTA = logging.getLogger("app")
 logger_SIMPLES = logging.getLogger("app.lowlevel")
-
 # Carrega o arquivo .env
 load_dotenv()
 
@@ -31,12 +30,10 @@ def _create_session_with_retries(retries=3, backoff_factor=0.3, status_forcelist
     session.mount("http://", adapter)
     return session
 
-
 def extract():
-    """Extrai dados da API. Retorna um DataFrame vazio em caso de falha, registrando o erro."""
 
-    url = os.getenv("ENDPOINT")
-    TOKEN = os.getenv("TOKEN")
+    url = os.getenv("ENDPOINT_AUTENTICACAO")
+    TOKEN = os.getenv("TOKEN_AUTENTICACAO")
 
     if not url:
         logger_ALERTA.error("ENDPOINT não definido nas variáveis de ambiente.")
@@ -47,17 +44,31 @@ def extract():
         raise ValueError("TOKEN não definido")
 
     payload = {
-        "token": TOKEN,  # Aqui entra sua variável direto
-        "cod_interno": "",
-        "cod_fornecedor": "",
-        "descricao": "",
-        "estoque": "Estoque Principal",
-        "ativo": ""
+        "token": os.getenv("TOKEN_AUTENTICACAO"),
+        "checklists": [
+            {
+                "nome": "Teste Checklist API 2",
+                "rev": "1",
+                "itens": [
+                    {"descricao": "Grupo 1", "tipo": "split", "medicao": "", "pendencia": 1, "foto": 0},
+                    {"descricao": "Item 1", "tipo": "item", "medicao": "", "pendencia": 1, "foto": 0},
+                    {"descricao": "Item 2", "tipo": "item", "medicao": "Horímetro (h)", "pendencia": 1, "foto": 0}
+                ]
+            },
+            {
+                "nome": "Teste Checklist API 3",
+                "rev": "1",
+                "itens": [
+                    {"descricao": "Grupo 1", "tipo": "split", "medicao": "", "pendencia": 1, "foto": 0},
+                    {"descricao": "Item 1", "tipo": "item", "medicao": "", "pendencia": 1, "foto": 1},
+                    {"descricao": "Item 2", "tipo": "item", "medicao": "Horímetro (h)", "pendencia": 1, "foto": 1}
+                ]
+            }
+        ]
     }
-
+    
     headers = {"Content-Type": "application/json"}
 
-    # Preparando a requisição com retries e timeout
     s = _create_session_with_retries()
 
     try:
@@ -105,6 +116,8 @@ def extract():
         except Exception:
             pass
 
-
 if __name__ == "__main__":
-    extract()
+    df = extract()
+    print(df)
+    print(df.columns)
+    print(df[df['Nome'] == 'Gabriel Menezes de Morais da Mata'])

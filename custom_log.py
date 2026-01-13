@@ -1,6 +1,4 @@
-# Arquivo: custom_log.py
 import logging.handlers
-import smtplib
 from email.utils import formatdate
 
 class SSLSMTPHandler(logging.handlers.SMTPHandler):

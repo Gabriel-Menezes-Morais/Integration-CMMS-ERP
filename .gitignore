@@ -215,4 +215,7 @@ images/
 *.json
 log_config.json
 *.log
+*.yaml
+config.yaml
+
 
