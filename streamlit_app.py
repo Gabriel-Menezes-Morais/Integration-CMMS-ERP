@@ -3,7 +3,6 @@ import streamlit as st
 from funcoesBD import compra_item, deletar_item_carrinho, carrinho_full_filtrado
 from integracao import extract
 from listas import listagem_nec, listagem_ped
-import time
 import json
 import logging
 from dotenv import load_dotenv
@@ -12,8 +11,13 @@ import yaml
 from yaml.loader import SafeLoader
 from logging.config import dictConfig
 
-with open('config.yaml', 'r') as file:
-    config = yaml.load(file, Loader=SafeLoader)
+@st.cache_data
+def users_file():
+    with open('config.yaml', 'r') as file:
+        config = yaml.load(file, Loader=SafeLoader)
+    return config
+
+config = users_file()
 
 authenticator = st_auth.Authenticate(
     config['credentials'],
@@ -28,7 +32,13 @@ if st.session_state["authentication_status"]:
 
     authenticator.logout('Logout', 'sidebar')
     st.sidebar.write(f'Bem-vindo, *{st.session_state["name"]}*')
-    load_dotenv()
+
+    @st.cache_data
+    def load_env():
+        """Carrega as variáveis de ambiente do arquivo .env"""
+        return load_dotenv()
+    
+    load_env()
 
     email_dev = os.getenv("EMAIL_DEV")
 
@@ -40,11 +50,15 @@ if st.session_state["authentication_status"]:
     st.sidebar.markdown("---")
     st.sidebar.caption("e-mail:\n{}".format(email_dev))
     imagem = os.getenv("IMAGE")
-        
-    with open("log_config.json", "r") as f:
-        config = json.load(f)
+    
+    @st.cache_data
+    def load_logger_config():
+        with open("log_config.json", "r") as f:
+            configLOG = json.load(f)
+        return configLOG
+    configLOG = load_logger_config()
 
-    logging.config.dictConfig(config)
+    logging.config.dictConfig(configLOG)
 
     logger_info = logging.getLogger("app.lowlevel")
 
@@ -58,8 +72,6 @@ if st.session_state["authentication_status"]:
 
         placeholder.info("Pedido realizado.")
         
-        time.sleep(2)
-
         placeholder.empty()
         st.session_state.enviado -= 1
     elif st.session_state.enviado == 2:
@@ -67,15 +79,17 @@ if st.session_state["authentication_status"]:
 
         placeholder.info("Pedido desfeito.")
 
-        time.sleep(2)
-
         placeholder.empty()
         st.session_state.enviado -= 2
     
-
     #Configurações manuais de CSS da página
-    with open("style.css") as file:
-        st.markdown(f"<style>{file.read()}</style>", unsafe_allow_html=True)
+    @st.cache_data
+    def inject_css():
+        with open("style.css") as file:
+            st.markdown(f"<style>{file.read()}</style>", unsafe_allow_html=True)
+        return
+    
+    inject_css()
 
     collogo, coltitle, colspace = st.columns([0.1, 0.7, 0.1])
     with coltitle:
@@ -139,14 +153,19 @@ if st.session_state["authentication_status"]:
             horizontal=True
         )
 
+    if 'filtroAnt' not in st.session_state:
+        st.session_state.filtroAnt = filtroAnt = 'Todos'
+    
+    
     if filtro == "Concluídos":
         df_pedidos = df_pedidos[df_pedidos['IDPedCom'].notna()]
     elif filtro == "Pendentes":
         df_pedidos = df_pedidos[df_pedidos['IDPedCom'].isna()]
 
-    if 'pedidos' not in st.session_state:
-        st.session_state.pedidos = listagem_ped(df_pedidos)
 
+    if 'pedidos' not in st.session_state or st.session_state.filtroAnt != filtro:
+        st.session_state.pedidos = listagem_ped(df_pedidos)
+        st.session_state.filtroAnt = filtro
     total_itens_nec = len(st.session_state.pedidos)
 
     # Cálculos dos índices (Onde começa e onde termina a fatia)
@@ -203,8 +222,7 @@ if st.session_state["authentication_status"]:
                 verif = df_pedidos['IDPedCom'].loc[df_pedidos['CodProCOPY'] == item_comprado[0]]
                 exist = (df_pedidos['CodProCOPY'] ==  item_comprado[0]).any()
 
-                # Verifica se o pedido foi atendido ou está pendente, caso foi atendido, não terá opção de desfazer o pedido
-                if verif.empty and exist:
+                if verif.any() and exist:
                     pendencia = 'concluído'
 
                 with col1:
@@ -212,11 +230,12 @@ if st.session_state["authentication_status"]:
                     if pendencia == "pendente":
 
                         item_nome = df_check["Descrição"].loc[df_check['Cód. Interno'] == item_comprado[0]]
-                        if isinstance(item_nome, str):
-                            st.write("Descrição: {}".format(item_nome))
-                        else:
-                            item_nome = item_nome.values[0]
+                        item_nome = item_nome.values[0]
                         st.checkbox("Descrição: {}".format(item_nome), key=f"check_{item_comprado[0]}_{id}")
+                    else:
+                        st.write("Descrição: {}".format(
+                            df_check["Descrição"].loc[df_check['Cód. Interno'] == item_comprado[0]].values[0]
+                        ))
                 with col2:
                     st.write("Un.: {}".format(df_check["Un."].loc[df_check['Cód. Interno'] == item_comprado[0]].values[0])) 
                 with col3:
