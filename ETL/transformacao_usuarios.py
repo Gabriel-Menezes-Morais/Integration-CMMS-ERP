@@ -1,5 +1,5 @@
 import pandas as pd
-import integra_API_Usuarios
+import services.integra_API_Usuarios as integra_API_Usuarios
 import logging
 import yaml
 import os
@@ -105,7 +105,7 @@ def transformar_usuarios():
         }
 
         # Salva o YAML em um arquivo
-        with open('config.yaml', 'w', encoding='utf-8') as file:
+        with open('config/config.yaml', 'w', encoding='utf-8') as file:
             yaml.dump(yaml_data, file, default_flow_style=False, allow_unicode=True, sort_keys=False)
         
         return df_transformado

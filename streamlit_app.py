@@ -1,9 +1,9 @@
 import os
 import streamlit as st
-from integra_API_Usuarios import list_movest_edit
-from funcoesBD import compra_item, deletar_item_carrinho, carrinho_full_filtrado
-from integracao import extract
-from listas import listagem_nec, listagem_ped
+from services.integra_API_Usuarios import list_movest_edit
+from database.funcoesBD import compra_item, deletar_item_carrinho, carrinho_full_filtrado
+from services.integra_API_ListarPecas import extract
+from ETL.listas import listagem_nec, listagem_ped
 import json
 import logging
 from dotenv import load_dotenv
@@ -14,7 +14,7 @@ from logging.config import dictConfig
 
 @st.cache_data
 def users_file():
-    with open('config.yaml', 'r') as file:
+    with open('config/config.yaml', 'r') as file:
         config = yaml.load(file, Loader=SafeLoader)
     return config
 
@@ -36,7 +36,7 @@ if st.session_state["authentication_status"]:
 
     @st.cache_data
     def load_env():
-        """Carrega as variáveis de ambiente do arquivo .env"""
+        # Carrega as variáveis de ambiente do arquivo .env
         return load_dotenv()
     
     load_env()
@@ -76,7 +76,7 @@ if st.session_state["authentication_status"]:
     
     @st.cache_data
     def load_logger_config():
-        with open("log_config.json", "r") as f:
+        with open("config/log_config.json", "r") as f:
             configLOG = json.load(f)
         return configLOG
     configLOG = load_logger_config()
@@ -133,7 +133,7 @@ if st.session_state["authentication_status"]:
     #Configurações manuais de CSS da página
     @st.cache_data
     def inject_css():
-        with open("style.css") as file:
+        with open("custom/style.css") as file:
             st.markdown(f"<style>{file.read()}</style>", unsafe_allow_html=True)
         return
     
@@ -279,11 +279,11 @@ if st.session_state["authentication_status"]:
 
                         item_nome = df_check["Descrição"].loc[df_check['Cód. Interno'] == item_comprado[0]]
                         item_nome = item_nome.values[0]
-                        st.caption("Desfazer necessidade?")
+                        st.caption(":blue[Desfazer necessidade?]")
                         st.checkbox("Descrição: {}".format(item_nome), key=f"check_{item_comprado[0]}_{id}")
                         
                     else:
-                        st.caption("Item recebido?")
+                        st.caption(":yellow[Item recebido?]")
                         st.checkbox("Descrição: {}".format(
                             df_check["Descrição"].loc[df_check['Cód. Interno'] == item_comprado[0]].values[0]
                         ), key=f"recebido_{item_comprado[0]}_{id}")

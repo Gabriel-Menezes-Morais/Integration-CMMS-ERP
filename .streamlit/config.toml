@@ -4,7 +4,7 @@ backgroundColor = "rgb(243, 243, 243)"
 secondaryBackgroundColor = "#efe360" 
 textColor = "#014180" 
 
-
-
+[theme.sidebar]
+linkColor="#04075b"
 
 

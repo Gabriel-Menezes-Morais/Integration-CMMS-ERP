@@ -8,7 +8,7 @@ import json
 from logging.config import dictConfig
 import time
 
-with open("log_config.json", "r") as f:
+with open("config/log_config.json", "r") as f:
     configLOG = json.load(f)
 
 logging.config.dictConfig(configLOG)

@@ -4,7 +4,7 @@ import os
 import logging
 import sqlalchemy
 logger_Alerta = logging.getLogger("app")
-
+from sqlalchemy import text
 # Carrega o arquivo .env
 load_dotenv()
 
@@ -37,7 +37,7 @@ def carrinho():
     try:
         engine = conexao()  # Tenta estabelecer a conexão
         query = "SELECT * FROM dbo.CadNecComCOPY WHERE IDPedCom IS NULL"
-        df = pd.read_sql(query, engine)
+        df = pd.read_sql(text(query), engine)
     except Exception as e:
         logger_Alerta.exception(f"Erro ao obter dados do carrinho: {e}")
         return None  # Retorna None ou uma lista vazia, dependendo do que faz sentido no seu contexto
@@ -52,7 +52,7 @@ def carrinho_full_filtrado():
                     INNER JOIN dbo.CadProCOPY AS P
                     ON E.CodProCOPY = P.REF
                     WHERE P.GrupoH = 3969"""
-        df = pd.read_sql(query, engine)
+        df = pd.read_sql(text(query), engine)
     except Exception as e:
         logger_Alerta.exception(f"Erro ao obter dados filtrados do carrinho: {e}")
         return None  # Retorna None ou uma lista vazia
@@ -68,7 +68,7 @@ def deletar_item_carrinho(CODIGOS):
         parametros = [{"cod_id": item} for item in CODIGOS]
 
         with engine.begin() as conn:
-            conn.execute(query, parametros)
+            conn.execute(text(query), parametros)
 
     except Exception as e:
         logger_Alerta.exception(f"Erro ao deletar itens do carrinho: {e}")
@@ -84,7 +84,7 @@ def compra_item(datas):
         parametros = [{"cod": item[0], "qtd": item[1]} for item in datas]
 
         with engine.begin() as conn:
-            conn.execute(sql_insert, parametros)
+            conn.execute(text(sql_insert), parametros)
 
     except Exception as e:
         logger_Alerta.exception(f"Erro ao adicionar itens ao carrinho: {e}")

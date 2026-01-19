@@ -1,5 +1,5 @@
-from Transformacao import df_transform
-from funcoesBD import carrinho
+from ETL.Transformacao import df_transform
+from database.funcoesBD import carrinho
 
 #USAR AGENDADOR DE TAREFAS PARA ESTAR SEMPRE ATUALIZANDO A TABELA DA PÁGINA # CERTEZA?, n basta recarregar qnd abrir a página?
 

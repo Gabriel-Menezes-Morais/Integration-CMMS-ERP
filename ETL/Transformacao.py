@@ -1,4 +1,4 @@
-from integracao import extract
+from services.integra_API_ListarPecas import extract
 import pandas as pd
 import logging
 
