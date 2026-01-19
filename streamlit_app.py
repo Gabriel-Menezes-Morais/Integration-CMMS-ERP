@@ -1,5 +1,6 @@
 import os
 import streamlit as st
+from integra_API_Usuarios import list_movest_edit
 from funcoesBD import compra_item, deletar_item_carrinho, carrinho_full_filtrado
 from integracao import extract
 from listas import listagem_nec, listagem_ped
@@ -45,10 +46,32 @@ if st.session_state["authentication_status"]:
     st.sidebar.title("Informações")
     st.sidebar.info("Sistema de Geração de Necessidades v1.0\nDesenvolvido por Gabriel D'Amata")
     st.sidebar.markdown("---")
-    st.sidebar.info("Descrição sistema:")
-    st.sidebar.info("Sistema desenvolvido para automatizar a geração de necessidades de compra com base em regras pré-definidas, integrando-se com o ERP existente na empresa. Facilita o processo de aquisição, garantindo que os itens necessários sejam identificados e solicitados de forma eficiente.")
+    st.sidebar.info("Descrição do sistema:")
+    st.sidebar.info("Sistema desenvolvido para automatizar a geração de necessidades de compra com base em regras pré-definidas, " \
+    "integrando-se com o ERP existente na empresa. Facilita o processo de aquisição, garantindo que os itens necessários sejam identificados" \
+    " e solicitados de forma eficiente.")
     st.sidebar.markdown("---")
+    st.sidebar.info("AJUDA")
+    st.sidebar.markdown("--")
+    st.sidebar.write("Sobre Criar Necessidade")
+    st.sidebar.write('Na tabela "SELECIONE OS ITENS" estarão os itens que estão a baixo do estoque mínimo necessário, isto é,' \
+    'são necessários para o estoque de manutenção. Para gerar a necessidade do item, marque a caixa ao lado da descrição do item, após isso,' \
+    'com a caixa marcada, selecione a quantidade da compra, considerando a unidade do item. Por fim, marque "Atualizar e enviar selecionados".')
+    st.sidebar.markdown("--")
+    st.sidebar.write("Sobre Desfazer Necessidade")
+    st.sidebar.write('Na tabela "NECESSIDADE GERADAS", estarão todos os itens que foram pedidos pelo técnico de manutenção.' \
+    'Entre eles, estarão os itens que ja foram comprados pelo setor de compras, marcados como "concluídos", e os itens que ainda não foram, ' \
+    'marcados como "pendentes". Para os itens pendentes, ao marcar a caixinha, será desfeito o pedido(certifique com o setor de compras). Posteriormente,' \
+    'marque "Aplicar alterações" e desfaça o pedido.')
+    st.sidebar.markdown("--")
+    st.sidebar.write("Sobre Itens Recebidos")
+    st.sidebar.write('Para os itens marcados como concluídos, ao marcar a caixinha, o sistema irá considerar o exato momento de marcação como a hora de recebimento' \
+    'e automatizará, marcando como recebido a movimentação de estoque feita no sgman. Assim, aumentando o estoque do item na Lista de Peças. Ao marcar a caixinha,' \
+    'selecione "Aplicar alterações.')
+    st.sidebar.markdown("--")
+    st.sidebar.write('Observação: não selecione itens de diferentes páginas e envie. Faça página por página (caso houver mais de uma).')
     st.sidebar.caption("e-mail:\n{}".format(email_dev))
+
     imagem = os.getenv("IMAGE")
     
     @st.cache_data
@@ -63,6 +86,31 @@ if st.session_state["authentication_status"]:
     logger_info = logging.getLogger("app.lowlevel")
 
     st.set_page_config(layout="wide")
+
+    @st.dialog("⚠️ Confirmação Necessária")
+    def abrir_confirmacao(chaves_recebidos, itens_recebidos):
+        st.write(f"Há itens selecionados como recebido.")
+        st.write(f"Você tem certeza do recebimento desse item?")
+        st.write("Essa ação não pode ser desfeita.")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            try:
+                if st.button("Sim", type="primary"):
+                    for item in itens_recebidos:
+                        list_movest_edit(item[0], item[1])
+                    st.rerun()
+            except KeyError as e:
+                logger_info.info("O usuário marcou novamente um item já recebido")
+                st.write("O item ja foi marcado como recebido.")
+                
+        with col2:
+            if st.button("Cancelar"):
+                
+                for item in chaves_recebidos:
+                    del item
+                st.rerun() # Apenas fecha o modal
 
     if "enviado" not in st.session_state:
         st.session_state.enviado = 0
@@ -139,7 +187,7 @@ if st.session_state["authentication_status"]:
     if 'pagina_atual_nec' not in st.session_state:
         st.session_state.pagina_atual_nec = 0
 
-    def resetar_pagina():
+    def resetar_pagina_nec():
         st.session_state.pagina_atual_nec = 0
 
     # Filtragem para selecionar necessidades específicas
@@ -192,7 +240,7 @@ if st.session_state["authentication_status"]:
             )
 
         if termo_busca_nec:
-            resetar_pagina()
+            resetar_pagina_nec()
 
         lista_filtrada_nec = []
 
@@ -231,40 +279,55 @@ if st.session_state["authentication_status"]:
 
                         item_nome = df_check["Descrição"].loc[df_check['Cód. Interno'] == item_comprado[0]]
                         item_nome = item_nome.values[0]
+                        st.caption("Desfazer necessidade?")
                         st.checkbox("Descrição: {}".format(item_nome), key=f"check_{item_comprado[0]}_{id}")
+                        
                     else:
-                        st.write("Descrição: {}".format(
+                        st.caption("Item recebido?")
+                        st.checkbox("Descrição: {}".format(
                             df_check["Descrição"].loc[df_check['Cód. Interno'] == item_comprado[0]].values[0]
-                        ))
+                        ), key=f"recebido_{item_comprado[0]}_{id}")
+                        
                 with col2:
+                    st.write("")
                     st.write("Un.: {}".format(df_check["Un."].loc[df_check['Cód. Interno'] == item_comprado[0]].values[0])) 
                 with col3:
-
+                    st.write("")
                     st.write("Cód.: {}".format(item_comprado[0]))    
                 with col4:
-
-                    st.write("Quantidade: {:.1f}".format(item_comprado[1]))
+                    st.write("")
+                    st.write("Qtd: {:.1f}".format(item_comprado[1]))
                 with col5:
-
+                    st.write("")
                     st.write("{}".format(pendencia))
                 st.write('---')
 
-            enviado = st.form_submit_button("Desfazer necessidades selecionadas")
+            enviado = st.form_submit_button("Aplicar alterações")
         
         # Caso o botão for selecionado e houver itens selecionados na check box, retornaremos para a aba de seleção de compra
         if enviado:
-            
-            itens_para_mover = []
 
+            itens_para_mover = []
+            itens_recebidos = []
+            chaves_recebidos = []
             for id, i in enumerate(lista_filtrada_nec):
 
                 chave_checkbox = f"check_{i[0]}_{id}"
-
-                if st.session_state[chave_checkbox]:
+                chave_checkbox_rec = f"recebido_{i[0]}_{id}"
+                if st.session_state.get(chave_checkbox, False):
 
                     itens_para_mover.append(i[0])
                     del st.session_state[chave_checkbox]
+                if st.session_state.get(chave_checkbox_rec, False):
+                    
+                    chaves_recebidos.append(st.session_state[chave_checkbox_rec])
+                    itens_recebidos.append(i)
+
             # Caso houver itens, retornaremos o item para a lista de necessidades e atualizaremos a tabela do Banco de dados
+            if itens_recebidos:
+                
+                abrir_confirmacao(chaves_recebidos, itens_recebidos)
+
             if itens_para_mover:
 
                 st.session_state.reset_input_busca_nec = True
@@ -284,7 +347,8 @@ if st.session_state["authentication_status"]:
                 st.session_state.enviado += 2
                 st.rerun()
             else:
-                st.warning("Selecione pelo menos um item antes de enviar.")
+                if not itens_recebidos:
+                    st.warning("Selecione pelo menos um item antes de enviar.")
         col_ant, col_meio, col_prox = st.columns([1, 9.3, 1])
 
         num_pag_total_nec = 1

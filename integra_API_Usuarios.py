@@ -4,6 +4,14 @@ import pandas as pd
 import os
 import logging
 from dotenv import load_dotenv
+import json
+from logging.config import dictConfig
+import time
+
+with open("log_config.json", "r") as f:
+    configLOG = json.load(f)
+
+logging.config.dictConfig(configLOG)
 
 # Valida configurações mínimas
 logger_ALERTA = logging.getLogger("app")
@@ -116,6 +124,143 @@ def extract():
         except Exception:
             pass
 
+def edit_movest(ID, CODIGO, QTD):
+
+    url_mov = os.getenv("ENDPOINT_MOV")
+    token_mov = os.getenv("TOKEN_MOV")
+
+    if not url_mov:
+        logger_ALERTA.error("ENDPOINT não definido nas variáveis de ambiente.")
+        raise ValueError("ENDPOINT não definido")
+
+    if not token_mov:
+        logger_ALERTA.error("TOKEN não definido nas variáveis de ambiente.")
+        raise ValueError("TOKEN não definido")
+    named_tuple = time.localtime()
+    # Formato como YYYY-MM-DD, HH:MM
+    time_string = time.strftime("%Y-%m-%d %H:%M", named_tuple)
+    payload = { #TESTAR SE PRECISA COLOCAR INFOS ANTERIORES
+        "token": token_mov,
+        "id": ID,
+        "data_recebido":time_string,
+        "materiais": [
+            {
+                "codigo": CODIGO,
+                "qut": QTD,
+                "acao": "edit"
+            }
+        ]
+    }
+    headers = {}
+
+    s = _create_session_with_retries()
+
+    try:
+        prepped = Request('POST', url_mov, json=payload, headers=headers).prepare()
+        response = s.send(prepped, timeout=10)
+
+        # Lança exceção para status codes 4xx/5xx
+        response.raise_for_status()
+
+        try:
+            status = response.json()
+        except ValueError as e:
+            logger_ALERTA.exception("Erro ao decodificar JSON da resposta: %s", e)
+            return
+
+
+        logger_SIMPLES.info(status)
+        logger_SIMPLES.info(response.status_code)
+        return
+
+    except requests.exceptions.Timeout as e:
+        logger_ALERTA.exception("Timeout ao chamar a API: %s", e)
+        return
+    except requests.exceptions.ConnectionError as e:
+        logger_ALERTA.exception("Erro de conexão com a API: %s", e)
+        return
+    except requests.exceptions.HTTPError as e:
+        status = getattr(e.response, 'status_code', 'desconhecido')
+        logger_ALERTA.exception("Resposta HTTP inválida: %s - status: %s", e, status)
+        return
+    except requests.exceptions.RequestException as e:
+        logger_ALERTA.exception("Erro não esperado ao chamar a API: %s", e)
+        return
+    finally:
+        try:
+            s.close()
+        except Exception:
+            pass
+
+def list_movest_edit(CODIGO, QTD):
+
+    url_mov = os.getenv("ENDPOINT_LIST")
+    token_mov = os.getenv("TOKEN_LIST")
+
+    if not url_mov:
+        logger_ALERTA.error("ENDPOINT não definido nas variáveis de ambiente.")
+        raise ValueError("ENDPOINT não definido")
+
+    if not token_mov:
+        logger_ALERTA.error("TOKEN não definido nas variáveis de ambiente.")
+        raise ValueError("TOKEN não definido")
+
+    payload = {
+        "token": token_mov,
+        "estoque": "Estoque Principal",
+        "data_inicio": "2026-01-01",
+        "data_fim": "2030-01-15", 
+        "status": "Em Aberto",
+        "codigo_material": CODIGO,
+    }
+
+    headers = {}
+
+    s = _create_session_with_retries()
+
+    try:
+        prepped = Request('POST', url_mov, json=payload, headers=headers).prepare()
+        response = s.send(prepped, timeout=10)
+
+        # Lança exceção para status codes 4xx/5xx
+        response.raise_for_status()
+
+        try:
+            data = response.json()
+        except ValueError as e:
+            logger_ALERTA.exception("Erro ao decodificar JSON da resposta: %s", e)
+            return pd.DataFrame()
+
+        df = pd.DataFrame(data)
+        logger_SIMPLES.info(df)
+        logger_SIMPLES.info(response.status_code)
+        # Editamos o movimento de estoque com a data de recebimento
+        id = df.loc[0, "ID"]
+
+        edit_movest(id, CODIGO, QTD)
+
+        return 
+
+    except requests.exceptions.Timeout as e:
+        logger_ALERTA.exception("Timeout ao chamar a API: %s", e)
+        return
+    except requests.exceptions.ConnectionError as e:
+        logger_ALERTA.exception("Erro de conexão com a API: %s", e)
+        return
+    except requests.exceptions.HTTPError as e:
+        status = getattr(e.response, 'status_code', 'desconhecido')
+        logger_ALERTA.exception("Resposta HTTP inválida: %s - status: %s", e, status)
+        return
+    except requests.exceptions.RequestException as e:
+        logger_ALERTA.exception("Erro não esperado ao chamar a API: %s", e)
+        return
+    finally:
+        try:
+            s.close()
+        except Exception:
+            pass
+
+
 if __name__ == "__main__":
-    df = extract()
-    print(df)
+    list_movest_edit(17052, 1)
+
