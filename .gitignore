@@ -217,5 +217,6 @@ log_config.json
 *.log
 *.yaml
 config.yaml
+streamlit_app_TESTE.py
 
 

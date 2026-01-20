@@ -8,18 +8,23 @@ import json
 import logging
 from dotenv import load_dotenv
 import streamlit_authenticator as st_auth
+import pandas as pd
+import time
 import yaml
 from yaml.loader import SafeLoader
 from logging.config import dictConfig
 
+# Carregamento do arquivo de configuração de usuários
 @st.cache_data
 def users_file():
     with open('config/config.yaml', 'r') as file:
         config = yaml.load(file, Loader=SafeLoader)
     return config
 
+# Carrega a configuração de usuários
 config = users_file()
 
+# Configuração do autenticador
 authenticator = st_auth.Authenticate(
     config['credentials'],
     config['cookie']['name'],
@@ -27,14 +32,20 @@ authenticator = st_auth.Authenticate(
     config['cookie']['expiry_days']
 )
 
+# Tela de login
 authenticator.login()
 
+# Bloco principal da aplicação, apenas acessível se o usuário estiver autenticado
 if st.session_state["authentication_status"]:
 
+    # Medição do tempo de execução do script
+    start_time = time.time()
+
+    # Opção de logout
     authenticator.logout('Logout', 'sidebar')
     st.sidebar.write(f'Bem-vindo, *{st.session_state["name"]}*')
 
-    @st.cache_data
+    @st.cache_data # Cache para evitar recarregamento desnecessário
     def load_env():
         # Carrega as variáveis de ambiente do arquivo .env
         return load_dotenv()
@@ -43,38 +54,53 @@ if st.session_state["authentication_status"]:
 
     email_dev = os.getenv("EMAIL_DEV")
 
+    # Configuração da barra lateral
+    # Barra lateral com informações sobre o sistema
     st.sidebar.title("Informações")
     st.sidebar.info("Sistema de Geração de Necessidades v1.0\nDesenvolvido por Gabriel D'Amata")
+
     st.sidebar.markdown("---")
+
     st.sidebar.info("Descrição do sistema:")
     st.sidebar.info("Sistema desenvolvido para automatizar a geração de necessidades de compra com base em regras pré-definidas, " \
     "integrando-se com o ERP existente na empresa. Facilita o processo de aquisição, garantindo que os itens necessários sejam identificados" \
-    " e solicitados de forma eficiente.")
-    st.sidebar.markdown("---")
+    " e solicitados de forma eficiente.") 
+
+    st.sidebar.markdown("---") 
+
     st.sidebar.info("AJUDA")
+
     st.sidebar.markdown("--")
+
     st.sidebar.write("Sobre Criar Necessidade")
     st.sidebar.write('Na tabela "SELECIONE OS ITENS" estarão os itens que estão a baixo do estoque mínimo necessário, isto é,' \
     'são necessários para o estoque de manutenção. Para gerar a necessidade do item, marque a caixa ao lado da descrição do item, após isso,' \
     'com a caixa marcada, selecione a quantidade da compra, considerando a unidade do item. Por fim, marque "Atualizar e enviar selecionados".')
+
     st.sidebar.markdown("--")
+
     st.sidebar.write("Sobre Desfazer Necessidade")
     st.sidebar.write('Na tabela "NECESSIDADE GERADAS", estarão todos os itens que foram pedidos pelo técnico de manutenção.' \
     'Entre eles, estarão os itens que ja foram comprados pelo setor de compras, marcados como "concluídos", e os itens que ainda não foram, ' \
     'marcados como "pendentes". Para os itens pendentes, ao marcar a caixinha, será desfeito o pedido(certifique com o setor de compras). Posteriormente,' \
     'marque "Aplicar alterações" e desfaça o pedido.')
+
     st.sidebar.markdown("--")
+
     st.sidebar.write("Sobre Itens Recebidos")
     st.sidebar.write('Para os itens marcados como concluídos, ao marcar a caixinha, o sistema irá considerar o exato momento de marcação como a hora de recebimento' \
     'e automatizará, marcando como recebido a movimentação de estoque feita no sgman. Assim, aumentando o estoque do item na Lista de Peças. Ao marcar a caixinha,' \
     'selecione "Aplicar alterações.')
+
     st.sidebar.markdown("--")
+
     st.sidebar.write('Observação: não selecione itens de diferentes páginas e envie. Faça página por página (caso houver mais de uma).')
     st.sidebar.caption("e-mail:\n{}".format(email_dev))
 
     imagem = os.getenv("IMAGE")
     
-    @st.cache_data
+    # Configuração do logger
+    @st.cache_data # Cache para evitar recarregamento desnecessário
     def load_logger_config():
         with open("config/log_config.json", "r") as f:
             configLOG = json.load(f)
@@ -87,7 +113,8 @@ if st.session_state["authentication_status"]:
 
     st.set_page_config(layout="wide")
 
-    @st.dialog("⚠️ Confirmação Necessária")
+    # Função de confirmação de recebimento de itens
+    @st.dialog("⚠️ Confirmação Necessária") # Título do modal
     def abrir_confirmacao(chaves_recebidos, itens_recebidos):
         st.write(f"Há itens selecionados como recebido.")
         st.write(f"Você tem certeza do recebimento desse item?")
@@ -97,12 +124,13 @@ if st.session_state["authentication_status"]:
         
         with col1:
             try:
-                if st.button("Sim", type="primary"):
+                if st.button("Sim", type="primary"):# Botão de confirmação
                     for item in itens_recebidos:
                         list_movest_edit(item[0], item[1])
+                    logger_info.info("O usuário confirmou o recebimento dos itens.") # Log da confirmação
                     st.rerun()
             except KeyError as e:
-                logger_info.info("O usuário marcou novamente um item já recebido")
+                logger_info.info("O usuário marcou novamente um item já recebido") # Log da tentativa de marcar item já recebido
                 st.write("O item ja foi marcado como recebido.")
                 
         with col2:
@@ -112,24 +140,6 @@ if st.session_state["authentication_status"]:
                     del item
                 st.rerun() # Apenas fecha o modal
 
-    if "enviado" not in st.session_state:
-        st.session_state.enviado = 0
-
-    if st.session_state.enviado == 1:
-        placeholder = st.empty()
-
-        placeholder.info("Pedido realizado.")
-        
-        placeholder.empty()
-        st.session_state.enviado -= 1
-    elif st.session_state.enviado == 2:
-        placeholder = st.empty()
-
-        placeholder.info("Pedido desfeito.")
-
-        placeholder.empty()
-        st.session_state.enviado -= 2
-    
     #Configurações manuais de CSS da página
     @st.cache_data
     def inject_css():
@@ -137,15 +147,18 @@ if st.session_state["authentication_status"]:
             st.markdown(f"<style>{file.read()}</style>", unsafe_allow_html=True)
         return
     
+    # Injeção do CSS personalizado
     inject_css()
 
+    # Cabeçalho da página
     collogo, coltitle, colspace = st.columns([0.1, 0.7, 0.1])
     with coltitle:
         st.write("""
             # Geração de Necessidade
         """)
     with collogo:
-        st.image(imagem, width=250)
+        st.image(imagem, width=250) 
+        pass
     with colspace:
         st.write("")
 
@@ -172,8 +185,21 @@ if st.session_state["authentication_status"]:
     if 'extract' not in st.session_state:
         st.session_state.extract = extract()
 
-    df_check = st.session_state.extract
+    # mapas para lookup rápido
+    if 'desc_map' not in st.session_state:
+        df_check = st.session_state.extract
+        st.session_state.desc_map = df_check.set_index('Cód. Interno')['Descrição'].to_dict()
+    if 'un_map' not in st.session_state:
+        df_check = st.session_state.extract
+        st.session_state.un_map = df_check.set_index('Cód. Interno')['Un.'].to_dict()
+    if 'estoque_min_map' not in st.session_state:
+        df_check = st.session_state.extract
+        st.session_state.estoque_min_map = df_check.set_index('Cód. Interno')['Estoque Mín.'].to_dict()
+    if 'estoque_map' not in st.session_state:
+        df_check = st.session_state.extract
+        st.session_state.estoque_map = df_check.set_index('Cód. Interno')['Estoque'].to_dict()
 
+    # Lista de necessidades
     if 'df' not in st.session_state: 
 
         necessidades = listagem_nec()
@@ -182,7 +208,11 @@ if st.session_state["authentication_status"]:
 
     df_pedidos = st.session_state.df
 
-    ITENS_POR_PAGINA_NEC = 5
+    # Mapa para IDPedCom
+    if 'idped_map' not in st.session_state:
+        st.session_state.idped_map = df_pedidos.set_index('CodProCOPY')['IDPedCom'].to_dict()
+
+    ITENS_POR_PAGINA_NEC = 3
 
     if 'pagina_atual_nec' not in st.session_state:
         st.session_state.pagina_atual_nec = 0
@@ -201,16 +231,17 @@ if st.session_state["authentication_status"]:
             horizontal=True
         )
 
+    # Armazena o filtro anterior para comparação
     if 'filtroAnt' not in st.session_state:
         st.session_state.filtroAnt = filtroAnt = 'Todos'
     
-    
+    # Aplica o filtro selecionado
     if filtro == "Concluídos":
         df_pedidos = df_pedidos[df_pedidos['IDPedCom'].notna()]
     elif filtro == "Pendentes":
         df_pedidos = df_pedidos[df_pedidos['IDPedCom'].isna()]
 
-
+    # Atualiza a lista de pedidos se o filtro mudou
     if 'pedidos' not in st.session_state or st.session_state.filtroAnt != filtro:
         st.session_state.pedidos = listagem_ped(df_pedidos)
         st.session_state.filtroAnt = filtro
@@ -227,6 +258,7 @@ if st.session_state["authentication_status"]:
     # Mostra em qual página estamos
         st.caption(f"Mostrando {len(lote_atual_nec)} de {total_itens_nec} itens encontrados.")
 
+        # Barra de busca para filtrar os itens
         if st.session_state.get("reset_input_busca_nec", False):
             st.session_state["input_busca_nec"] = ""
             st.session_state["reset_input_busca_nec"] = False
@@ -249,14 +281,10 @@ if st.session_state["authentication_status"]:
         else:
             termo_nec = termo_busca_nec.lower()
             logger_info.info(f"Usuário pesquisou por '{termo_busca_nec}' na lista de necessidades.")
-            for item_id, item in lote_atual_nec:
-                # Busca a descrição no DataFrame
-                desc_raw = df_check.loc[df_check['Cód. Interno'] == item_id, "Descrição"]
-                descricao = str(desc_raw.values[0]) if not desc_raw.empty else ""
-                
-                # Verifica se o termo está no ID (convertido p/ texto) OU na Descrição
-                if termo_nec in str(item_id) or termo_nec in descricao.lower():
-                    lista_filtrada_nec.append((item_id, item))
+            lista_filtrada_nec = [
+                (item_id, item) for item_id, item in lote_atual_nec
+                if termo_nec in str(item_id) or termo_nec in st.session_state.desc_map.get(item_id, "").lower()
+            ]
 
     if not df_pedidos.empty:
 
@@ -266,31 +294,31 @@ if st.session_state["authentication_status"]:
 
                 col1, col2, col3, col4, col5 = st.columns([0.3, 0.175, 0.175, 0.175, 0.175])
 
+                # Verificação do status do pedido
                 pendencia = 'pendente'
-                verif = df_pedidos['IDPedCom'].loc[df_pedidos['CodProCOPY'] == item_comprado[0]]
-                exist = (df_pedidos['CodProCOPY'] ==  item_comprado[0]).any()
+                idped = st.session_state.idped_map.get(item_comprado[0], None)
 
-                if verif.any() and exist:
+                if idped is not None and pd.notna(idped):
                     pendencia = 'concluído'
 
                 with col1:
-
+        
                     if pendencia == "pendente":
-
-                        item_nome = df_check["Descrição"].loc[df_check['Cód. Interno'] == item_comprado[0]]
-                        item_nome = item_nome.values[0]
+                        # Item pendente, pode desfazer a necessidade
+                        item_nome = st.session_state.desc_map.get(item_comprado[0], "")
                         st.caption(":blue[Desfazer necessidade?]")
                         st.checkbox("Descrição: {}".format(item_nome), key=f"check_{item_comprado[0]}_{id}")
                         
                     else:
+                        # Item concluído, pode marcar como recebido
+                        item_nome = st.session_state.desc_map.get(item_comprado[0], "")
                         st.caption(":yellow[Item recebido?]")
                         st.checkbox("Descrição: {}".format(
-                            df_check["Descrição"].loc[df_check['Cód. Interno'] == item_comprado[0]].values[0]
-                        ), key=f"recebido_{item_comprado[0]}_{id}")
+                            item_nome), key=f"recebido_{item_comprado[0]}_{id}")
                         
                 with col2:
                     st.write("")
-                    st.write("Un.: {}".format(df_check["Un."].loc[df_check['Cód. Interno'] == item_comprado[0]].values[0])) 
+                    st.write("Un.: {}".format(st.session_state.un_map.get(item_comprado[0], ""))) 
                 with col3:
                     st.write("")
                     st.write("Cód.: {}".format(item_comprado[0]))    
@@ -329,9 +357,9 @@ if st.session_state["authentication_status"]:
                 abrir_confirmacao(chaves_recebidos, itens_recebidos)
 
             if itens_para_mover:
-
+                # Retorna os itens para a lista de necessidades
                 st.session_state.reset_input_busca_nec = True
-
+                # Adiciona os itens de volta à lista de necessidades
                 st.session_state.necessidades.extend(itens_para_mover)
                 deletar_item_carrinho(itens_para_mover)
                 
@@ -344,15 +372,17 @@ if st.session_state["authentication_status"]:
                 ]
 
                 logger_info.info(f"Itens {', '.join([f'{x}' for x in itens_para_mover])} removidos da tabela de necessidades no banco de dados.")
-                st.session_state.enviado += 2
                 st.rerun()
             else:
                 if not itens_recebidos:
                     st.warning("Selecione pelo menos um item antes de enviar.")
+        
+        # Paginação da tabela de necessidades
         col_ant, col_meio, col_prox = st.columns([1, 9.3, 1])
 
         num_pag_total_nec = 1
-
+        
+        # Cálculo do número total de páginas
         if total_itens_nec % 5 != 0:
             num_pag_total_nec = int((total_itens_nec/5 + 1))
         else:
@@ -388,7 +418,7 @@ if st.session_state["authentication_status"]:
 
     st.subheader("SELECIONE OS ITENS")
 
-    ITENS_POR_PAGINA = 5
+    ITENS_POR_PAGINA = 3
 
     if 'pagina_atual' not in st.session_state:
         st.session_state.pagina_atual = 0
@@ -411,7 +441,7 @@ if st.session_state["authentication_status"]:
                 placeholder="Digite o nome ou código...",
                 key="input_busca"
             )
-
+        # Se houver termo de busca, reseta a página para a primeira
         if termo_busca:
             resetar_pagina()
         
@@ -422,14 +452,10 @@ if st.session_state["authentication_status"]:
         else:
             termo = termo_busca.lower()
             logger_info.info(f"Usuário pesquisou por '{termo_busca}' na lista de necessidades.")
-            for item_id in st.session_state.necessidades:
-                # Busca a descrição no DataFrame
-                desc_raw = df_check.loc[df_check['Cód. Interno'] == item_id, "Descrição"]
-                descricao = str(desc_raw.values[0]) if not desc_raw.empty else ""
-                
-                # Verifica se o termo está no ID (convertido p/ texto) OU na Descrição
-                if termo in str(item_id) or termo in descricao.lower():
-                    lista_filtrada.append(item_id)
+            lista_filtrada = [
+                item_id for item_id in st.session_state.necessidades
+                if termo in str(item_id) or termo in st.session_state.desc_map.get(item_id, "").lower()
+            ]
 
         if not lista_filtrada:
             st.warning(f"Nenhum produto encontrado para '{termo_busca}'.")
@@ -446,6 +472,7 @@ if st.session_state["authentication_status"]:
             # Mostra em qual página estamos
             st.caption(f"Mostrando {len(lote_atual)} de {total_itens} itens encontrados.")
 
+            # Tabela de amostragem dos itens para compra
             with st.form("Meu formulário de compras"):
                 for item in lote_atual:
 
@@ -454,20 +481,20 @@ if st.session_state["authentication_status"]:
                     with col1:
                         
                         # Verificação para caso houver mais de um item com o mesmo Código Interno, por alguma falha externa
-                        item_nome = df_check["Descrição"].loc[df_check['Cód. Interno'] == item]
-                        if isinstance(item_nome, str):
+                        item_nome = st.session_state.desc_map.get(item, "")
+                        if not item_nome:
                             continue
-                        else:
-                            item_nome = item_nome.values[0]
                         st.checkbox(item_nome, key=f"check_{item}")
                     with col2:
                         st.write("Cód.: {}".format(item))
                     with col3:
-                        st.write("Un.: {}".format(df_check["Un."].loc[df_check['Cód. Interno'] == item].values[0]))
+                        st.write("Un.: {}".format(st.session_state.un_map.get(item, "")))
                     with col4:
-                        st.caption(":red[Necessário {} para completar o estoque MÍNIMO.]".format(
-                            int(df_check["Estoque Mín."].loc[df_check['Cód. Interno'] == item].values[0]) -
-                                int(df_check["Estoque"].loc[df_check['Cód. Interno'] == item].values[0])))
+                        # Informação de quanto é necessário para completar o estoque mínimo
+                        estoque_min = st.session_state.estoque_min_map.get(item, 0) # Estoque mínimo
+                        estoque = st.session_state.estoque_map.get(item, 0) # Estoque atual
+                        necessario = int(estoque_min) - int(estoque) # Quantidade necessária para completar o estoque mínimo
+                        st.caption(":red[Necessário {} para completar o estoque MÍNIMO.]".format(necessario))
                     with col5:  
                         
                         # Alocação de quantidade desejada de compra
@@ -482,10 +509,12 @@ if st.session_state["authentication_status"]:
                 itens_para_mover = []
 
                 for i in lote_atual:
-
+                    
+                    # Pegamos as chaves dinâmicas
                     chave_checkbox = f"check_{i}"
                     chave_slider = f"slider_{i}"
-
+                    
+                    # Verificamos se a checkbox foi marcada
                     if st.session_state[chave_checkbox]:
                         # Guardamos os dados
                         quantidade = st.session_state[chave_slider]
@@ -494,14 +523,14 @@ if st.session_state["authentication_status"]:
                             i,
                             quantidade
                         ])
-
+                        # Deletamos as chaves para resetar o formulário
                         del st.session_state[chave_checkbox]
                         del st.session_state[chave_slider]
                 
                 if itens_para_mover:
-                    
+                    # Reseta a barra de busca
                     st.session_state.reset_input_busca = True
-
+                    # Adiciona os itens à lista de pedidos
                     st.session_state.pedidos.extend(itens_para_mover)
                     compra_item(itens_para_mover)
                     
@@ -513,10 +542,11 @@ if st.session_state["authentication_status"]:
                         if x not in nomes_para_remover
                     ]
                     
-                    st.session_state.enviado += 1
                     st.rerun()
                 else:
                     st.warning("Selecione pelo menos um item antes de enviar.")
+
+            # Paginação da tabela de seleção de compra
             col_ant, col_meio, col_prox = st.columns([1, 9.3, 1])
 
             num_pag_total = 1
@@ -546,7 +576,16 @@ if st.session_state["authentication_status"]:
                         if st.button("Próximo", icon=":material/line_end_arrow_notch:", width="stretch", key="button_pos_disp"):
                             st.session_state.pagina_atual += 1
                             st.rerun()
+
+    # Medição do tempo de execução do script
+    end_time = time.time()
+
+    # Log do tempo de execução
+    logger_info.info(f"tempo de execução do script: {end_time - start_time:.2f} segundos")
+
+# Fim do bloco de autenticação
 elif st.session_state["authentication_status"] is False:
     st.error('Usuário/senha incorreto')
+# Caso o usuário ainda não tenha inserido as credenciais
 elif st.session_state["authentication_status"] is None:
     st.warning('Por favor, insira seu usuário e senha')
