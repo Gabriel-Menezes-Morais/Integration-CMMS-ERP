@@ -157,7 +157,7 @@ if st.session_state["authentication_status"]:
             # Geração de Necessidade
         """)
     with collogo:
-        st.image(imagem, width=250) 
+        # st.image(imagem, width=250) # tempo de execução aumentado muito com a imagem
         pass
     with colspace:
         st.write("")
@@ -212,7 +212,7 @@ if st.session_state["authentication_status"]:
     if 'idped_map' not in st.session_state:
         st.session_state.idped_map = df_pedidos.set_index('CodProCOPY')['IDPedCom'].to_dict()
 
-    ITENS_POR_PAGINA_NEC = 3
+    ITENS_POR_PAGINA_NEC = 6
 
     if 'pagina_atual_nec' not in st.session_state:
         st.session_state.pagina_atual_nec = 0
@@ -225,38 +225,33 @@ if st.session_state["authentication_status"]:
     col_pag, col_fil = st.columns([0.78, 0.219])
 
     with col_fil:
+        if 'filtro' not in st.session_state:
+            st.session_state['filtro'] = 'Todos'
         filtro = st.radio(
             "FILTRO",
             ["Pendentes", "Concluídos", "Todos"],
-            horizontal=True
+            horizontal=True,
+            key='filtro'
         )
 
     # Armazena o filtro anterior para comparação
     if 'filtroAnt' not in st.session_state:
-        st.session_state.filtroAnt = filtroAnt = 'Todos'
+        st.session_state.filtroAnt = 'Todos'
     
     # Aplica o filtro selecionado
     if filtro == "Concluídos":
         df_pedidos = df_pedidos[df_pedidos['IDPedCom'].notna()]
+
     elif filtro == "Pendentes":
         df_pedidos = df_pedidos[df_pedidos['IDPedCom'].isna()]
 
     # Atualiza a lista de pedidos se o filtro mudou
-    if 'pedidos' not in st.session_state or st.session_state.filtroAnt != filtro:
+    if 'pedidos' not in st.session_state or st.session_state.filtroAnt != st.session_state['filtro']:
         st.session_state.pedidos = listagem_ped(df_pedidos)
-        st.session_state.filtroAnt = filtro
-    total_itens_nec = len(st.session_state.pedidos)
+        st.session_state.filtroAnt = st.session_state['filtro']
 
-    # Cálculos dos índices (Onde começa e onde termina a fatia)
-    inicio_nec = st.session_state.pagina_atual_nec * ITENS_POR_PAGINA_NEC
-    fim_nec = inicio_nec + ITENS_POR_PAGINA_NEC
-
-    # Cria a sub-lista (Apenas os 5 itens da vez)
-    lote_atual_nec = st.session_state.pedidos[inicio_nec:fim_nec]
 
     with col_pag:
-    # Mostra em qual página estamos
-        st.caption(f"Mostrando {len(lote_atual_nec)} de {total_itens_nec} itens encontrados.")
 
         # Barra de busca para filtrar os itens
         if st.session_state.get("reset_input_busca_nec", False):
@@ -277,20 +272,32 @@ if st.session_state["authentication_status"]:
         lista_filtrada_nec = []
 
         if not termo_busca_nec:
-            lista_filtrada_nec = lote_atual_nec
+            lista_filtrada_nec = st.session_state.pedidos
         else:
             termo_nec = termo_busca_nec.lower()
             logger_info.info(f"Usuário pesquisou por '{termo_busca_nec}' na lista de necessidades.")
             lista_filtrada_nec = [
-                (item_id, item) for item_id, item in lote_atual_nec
+                (item_id, item) for item_id, item in st.session_state.pedidos
                 if termo_nec in str(item_id) or termo_nec in st.session_state.desc_map.get(item_id, "").lower()
             ]
 
     if not df_pedidos.empty:
 
+        total_itens_nec = len(lista_filtrada_nec)
+
+        # Cálculos dos índices (Onde começa e onde termina a fatia)
+        inicio_nec = st.session_state.pagina_atual_nec * ITENS_POR_PAGINA_NEC
+        fim_nec = inicio_nec + ITENS_POR_PAGINA_NEC
+
+        # Cria a sub-lista (Apenas os 5 itens da vez)
+        lote_atual_nec = lista_filtrada_nec[inicio_nec:fim_nec]
+
+        # Mostra em qual página estamos
+        st.caption(f"Mostrando {len(lote_atual_nec)} de {total_itens_nec} itens encontrados.")
+
         # Tabela de amostragem das necessidades geradas
         with st.form("carrinho"):
-            for id, item_comprado in enumerate(lista_filtrada_nec):
+            for id, item_comprado in enumerate(lote_atual_nec):
 
                 col1, col2, col3, col4, col5 = st.columns([0.3, 0.175, 0.175, 0.175, 0.175])
 
@@ -334,14 +341,18 @@ if st.session_state["authentication_status"]:
         
         # Caso o botão for selecionado e houver itens selecionados na check box, retornaremos para a aba de seleção de compra
         if enviado:
+            logger_info.info("Botão 'Aplicar alterações' foi pressionado.")
+            logger_info.info(f"Lista filtrada nec: {lista_filtrada_nec}")
 
             itens_para_mover = []
             itens_recebidos = []
             chaves_recebidos = []
             for id, i in enumerate(lista_filtrada_nec):
+                logger_info.info(f"Processando item {id}: {i}")
 
                 chave_checkbox = f"check_{i[0]}_{id}"
                 chave_checkbox_rec = f"recebido_{i[0]}_{id}"
+                logger_info.info(f"Chave checkbox: {chave_checkbox}, Valor: {st.session_state.get(chave_checkbox, 'Não existe')}")
                 if st.session_state.get(chave_checkbox, False):
 
                     itens_para_mover.append(i[0])
@@ -350,6 +361,9 @@ if st.session_state["authentication_status"]:
                     
                     chaves_recebidos.append(st.session_state[chave_checkbox_rec])
                     itens_recebidos.append(i)
+
+            logger_info.info(f"Itens para mover: {itens_para_mover}")
+            logger_info.info(f"Itens recebidos: {itens_recebidos}")
 
             # Caso houver itens, retornaremos o item para a lista de necessidades e atualizaremos a tabela do Banco de dados
             if itens_recebidos:
@@ -361,21 +375,23 @@ if st.session_state["authentication_status"]:
                 st.session_state.reset_input_busca_nec = True
                 # Adiciona os itens de volta à lista de necessidades
                 st.session_state.necessidades.extend(itens_para_mover)
-                deletar_item_carrinho(itens_para_mover)
-                
-                logger_info.info(f"Itens {', '.join([f'{x}' for x in itens_para_mover])} removidos da tabela de necessidades no banco de dados.")
-                ids_para_remover = itens_para_mover 
 
+                logger_info.info(f"IDs para remover: {itens_para_mover}")
+                logger_info.info(f"Pedidos antes da remoção: {st.session_state.pedidos}")
                 st.session_state.pedidos = [
                     x for x in st.session_state.pedidos
-                    if [x[0]] not in ids_para_remover  
+                    if x[0] not in itens_para_mover 
                 ]
+                deletar_item_carrinho(itens_para_mover)
+                logger_info.info(f"Pedidos após a remoção: {st.session_state.pedidos}")
 
                 logger_info.info(f"Itens {', '.join([f'{x}' for x in itens_para_mover])} removidos da tabela de necessidades no banco de dados.")
-                st.rerun()
             else:
                 if not itens_recebidos:
                     st.warning("Selecione pelo menos um item antes de enviar.")
+
+            if itens_para_mover or itens_recebidos:
+                st.rerun()
         
         # Paginação da tabela de necessidades
         col_ant, col_meio, col_prox = st.columns([1, 9.3, 1])
@@ -383,10 +399,10 @@ if st.session_state["authentication_status"]:
         num_pag_total_nec = 1
         
         # Cálculo do número total de páginas
-        if total_itens_nec % 5 != 0:
-            num_pag_total_nec = int((total_itens_nec/5 + 1))
+        if total_itens_nec % 6 != 0:
+            num_pag_total_nec = int((total_itens_nec/6 + 1))
         else:
-            num_pag_total_nec = int((total_itens_nec/5))
+            num_pag_total_nec = int((total_itens_nec/6))
 
         if st.session_state.pagina_atual_nec + 1 != 1:
             with col_meio:
@@ -403,6 +419,7 @@ if st.session_state["authentication_status"]:
 
         if st.session_state.pagina_atual_nec + 1 != num_pag_total_nec:
             with col_prox:
+
                 # Só mostra o botão próximo se houver mais itens na frente
                 if fim_nec < total_itens_nec:
                     if st.button("Próximo", icon=":material/line_end_arrow_notch:", width="stretch", key="button_pos_nec"):
@@ -418,7 +435,7 @@ if st.session_state["authentication_status"]:
 
     st.subheader("SELECIONE OS ITENS")
 
-    ITENS_POR_PAGINA = 3
+    ITENS_POR_PAGINA = 6
 
     if 'pagina_atual' not in st.session_state:
         st.session_state.pagina_atual = 0
@@ -449,7 +466,9 @@ if st.session_state["authentication_status"]:
 
         if not termo_busca:
             lista_filtrada = st.session_state.necessidades
+
         else:
+
             termo = termo_busca.lower()
             logger_info.info(f"Usuário pesquisou por '{termo_busca}' na lista de necessidades.")
             lista_filtrada = [
@@ -458,7 +477,11 @@ if st.session_state["authentication_status"]:
             ]
 
         if not lista_filtrada:
-            st.warning(f"Nenhum produto encontrado para '{termo_busca}'.")
+
+            if termo_busca:
+                st.warning(f"Nenhum produto encontrado para '{termo_busca}'.")
+            elif not termo_busca:
+                st.warning("Nenhum produto encontrado na lista de necessidades.")
         else:
             total_itens = len(lista_filtrada)
             
@@ -551,17 +574,20 @@ if st.session_state["authentication_status"]:
 
             num_pag_total = 1
 
-            if total_itens % 5 != 0:
-                num_pag_total = int((total_itens/5 + 1))
+            if total_itens % 6 != 0:
+                num_pag_total = int((total_itens/6 + 1))
+
             else:
-                num_pag_total = int((total_itens/5))
+                num_pag_total = int((total_itens/6))
 
             if st.session_state.pagina_atual + 1 != 1:
                 with col_meio:
                     st.markdown(f"**Página {st.session_state.pagina_atual + 1}-{num_pag_total}**")
+
             else:
                 with col_ant:
                     st.markdown(f"**Página {st.session_state.pagina_atual + 1}-{num_pag_total}**")
+
             if st.session_state.pagina_atual + 1 != 1:
                 with col_ant:
                     if st.button("Anterior", icon=":material/line_start_arrow_notch:", width="stretch", key="button_ant_disp"):
@@ -571,6 +597,7 @@ if st.session_state["authentication_status"]:
 
             if st.session_state.pagina_atual + 1 != num_pag_total:
                 with col_prox:
+
                     # Só mostra o botão próximo se houver mais itens na frente
                     if fim < total_itens:
                         if st.button("Próximo", icon=":material/line_end_arrow_notch:", width="stretch", key="button_pos_disp"):

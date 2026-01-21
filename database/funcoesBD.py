@@ -65,7 +65,7 @@ def deletar_item_carrinho(CODIGOS):
 
         query = "DELETE FROM dbo.CadNecComCOPY WHERE CodProCOPY = :cod"
 
-        parametros = [{"cod_id": item} for item in CODIGOS]
+        parametros = [{"cod": item} for item in CODIGOS]
 
         with engine.begin() as conn:
             conn.execute(text(query), parametros)
