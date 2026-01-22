@@ -90,3 +90,24 @@ def compra_item(datas):
         logger_Alerta.exception(f"Erro ao adicionar itens ao carrinho: {e}")
         
     return
+
+def CadastrarBD(Item_Cadastro):
+    # Função de cadastro de item no banco de dados via stored procedure
+    try:
+        engine = conexao()  # Tenta estabelecer a conexão
+
+        sql_sp = "INSERT INTO dbo.CadProCOPY (REF, DESCRICAO, UNIDADE) VALUES (:cod_interno, :descricao, :unidade)"
+
+        parametros = {
+            "cod_interno": Item_Cadastro["codigo"],
+            "descricao": Item_Cadastro["descricao"],
+            "unidade": Item_Cadastro["unidade"]
+        }
+
+        with engine.begin() as conn:
+            conn.execute(text(sql_sp), parametros)
+
+    except Exception as e:
+        logger_Alerta.exception(f"Erro ao cadastrar item no banco de dados: {e}")
+        
+    return

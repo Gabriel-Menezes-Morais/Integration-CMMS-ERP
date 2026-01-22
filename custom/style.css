@@ -15,6 +15,20 @@
     margin-bottom: 1%;
     letter-spacing: 2px;
 }
+
+#cadastro-de-materiais{
+    text-align: center;
+    border: 1px solid;
+    border-color: rgba(1, 65, 128, 0.2);
+    border-radius: 20px;
+    padding: 5px;
+    margin-top: 5%;
+    margin-left: 10%;
+    margin-right: 10%;
+    margin-bottom: 10%;
+    letter-spacing: 2px;
+}
+
 .stAppDeployButton > button{
     visibility: hidden;
 }
@@ -49,3 +63,23 @@
     background-color: #fafafa;
 }  
 
+div[data-testid="stSidebarNav"] a {
+    background-color: #f0f2f6; /* Cor de fundo cinza claro */
+        border-radius: 8px;        /* Bordas arredondadas */
+        padding: 10px 15px;        /* Espaçamento interno */
+        margin-bottom: 8px;        /* Espaço entre os botões */
+        text-decoration: none;     /* Remove sublinhado padrão */
+        font-weight: 500;          /* Texto um pouco mais negrito */
+        color: #31333F;            /* Cor do texto */
+        transition: all 0.3s ease; /* Animação suave */
+        border: 1px solid transparent; /* Borda invisível para não pular no hover */
+}
+
+    
+div[data-testid="stSidebarNav"] a:hover {
+    background-color: #ffffff; /* Fundo branco ao passar o mouse */
+    border-color: #efe360;     /* Borda vermelha (cor padrão do Streamlit) */
+    color: #efe360;            /* Texto vermelho */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Sombra suave */
+    transform: translateX(5px); /* Move levemente para a direita */
+}

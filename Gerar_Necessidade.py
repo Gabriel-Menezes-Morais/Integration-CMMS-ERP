@@ -89,12 +89,14 @@ if st.session_state["authentication_status"]:
 
     st.sidebar.write("Sobre Itens Recebidos")
     st.sidebar.write('Para os itens marcados como concluídos, ao marcar a caixinha, o sistema irá considerar o exato momento de marcação como a hora de recebimento' \
-    'e automatizará, marcando como recebido a movimentação de estoque feita no sgman. Assim, aumentando o estoque do item na Lista de Peças. Ao marcar a caixinha,' \
-    'selecione "Aplicar alterações.')
+    'e atualizará o status do item no sgman para "recebido". Assim, aumentando o estoque do item na Lista de Peças. Ao marcar a caixinha,' \
+    'selecione "Aplicar alterações".')
 
     st.sidebar.markdown("--")
 
     st.sidebar.write('Observação: não selecione itens de diferentes páginas e envie. Faça página por página (caso houver mais de uma).')
+    st.sidebar.markdown("---")
+    st.sidebar.write("Para mais informações, entre em contato com o desenvolvedor:")
     st.sidebar.caption("e-mail:\n{}".format(email_dev))
 
     imagem = os.getenv("IMAGE")
@@ -111,7 +113,7 @@ if st.session_state["authentication_status"]:
 
     logger_info = logging.getLogger("app.lowlevel")
 
-    st.set_page_config(layout="wide")
+    st.set_page_config(page_title="SGNIM",layout="wide")
 
     # Função de confirmação de recebimento de itens
     @st.dialog("⚠️ Confirmação Necessária") # Título do modal
