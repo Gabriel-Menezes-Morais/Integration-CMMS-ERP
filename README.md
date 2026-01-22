@@ -10,6 +10,7 @@ This system is a web application developed in Python using Streamlit for integra
 - **Stock Monitoring**: Automatic verification of minimum vs. current stock levels
 - **Demand Generation**: Automatic creation of purchase needs based on low stock
 - **Shopping Cart**: Interface to manage items needed for maintenance
+- **Material Registration (PDM)**: Guided creation of standardized material descriptions with dynamic taxonomy
 - **API Integration**: Connection with external APIs for parts and user data
 - **Data ETL**: Extraction, transformation, and loading processes
 - **Interactive Dashboard**: Intuitive web interface for visualization and management
@@ -33,7 +34,10 @@ sistema_AutNec/
 │   ├── transformacao_usuarios.py  # User data transformation
 │   └── Transformacao.py  # General data transformation
 ├── images/                # Application images
+├── pages/                 # Streamlit pages
+│   └── Cadastrar_Item.py  # Material registration (PDM)
 ├── services/              # External API integrations
+│   ├── integra_API_Cadastro.py  # API for item registration
 │   ├── integra_API_ListarPecas.py  # API for parts listing
 │   └── integra_API_Usuarios.py     # API for users
 ├── custom_log.py          # Custom logging configuration
@@ -141,6 +145,17 @@ Structured logging configuration for different alert levels.
 - **Dashboard**: Visualization of maintenance needs
 - **Cart**: Management of items for purchase
 - **Monitoring**: Automatic stock verification
+- **PDM Registration**: Structured item creation with auto-generated codes and description preview
+
+### Material Registration (Cadastrar_Item.py)
+
+Steps to register a new item via the PDM page:
+1. Choose a base family or create a new one ("Base Name"), then create a new family if needed.
+2. Pick a type or add a new one with allowed variations and required technical specs.
+3. Optionally add new variations (finishes) for an existing type.
+4. Fill in the technical specifications requested for the selected family/type and choose the unit of measure.
+5. Review the auto-generated description preview and the next sequential code (mntXXXX).
+6. Submit to register the item: it calls the external registration API, persists in the ERP via `CadastrarBD`, and stores a local JSON history in `itens_cadastrados.json`. Existing taxonomy lives in `taxonomia_materiais.json` and is extended on the fly by the page.
 
 ## ETL Processes
 
