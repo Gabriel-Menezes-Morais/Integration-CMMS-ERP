@@ -3,6 +3,8 @@ from dotenv import load_dotenv
 import os
 import logging
 import sqlalchemy
+import time
+import datetime
 logger_Alerta = logging.getLogger("app")
 from sqlalchemy import text
 # Carrega o arquivo .env
@@ -47,11 +49,12 @@ def carrinho_full_filtrado():
     #Aqui, selecionamos os itens de necessidade que são somente da categoria de manutenção
     try:
         engine = conexao()  # Tenta estabelecer a conexão
-        query = """SELECT *
+        query = """SELECT DISTINCT E.*
                     From dbo.CadNecComCOPY AS E
                     INNER JOIN dbo.CadProCOPY AS P
                     ON E.CodProCOPY = P.REF
-                    WHERE P.GrupoH = 3969"""
+                    WHERE P.GrupoH = 3969
+                    ORDER BY E.CodProCOPY"""
         df = pd.read_sql(text(query), engine)
     except Exception as e:
         logger_Alerta.exception(f"Erro ao obter dados filtrados do carrinho: {e}")
@@ -111,3 +114,28 @@ def CadastrarBD(Item_Cadastro):
         logger_Alerta.exception(f"Erro ao cadastrar item no banco de dados: {e}")
         
     return
+
+def marcar_como_recebido(CODIGO):
+    """Marca o item como recebido atualizando a Data_Recebimento"""
+    try:
+        engine = conexao()
+        data_recebimento = datetime.datetime.now()
+        
+        query = """UPDATE dbo.CadNecComCOPY 
+                   SET Data_Recebimento = :data 
+                   WHERE CodProCOPY = :cod 
+                   AND IDPedCom IS NOT NULL 
+                   AND Data_Recebimento IS NULL"""
+        
+        with engine.begin() as conn:
+            conn.execute(text(query), {"data": data_recebimento, "cod": CODIGO})
+        
+        logger_Alerta.info(f"Item {CODIGO} marcado como recebido em {data_recebimento.strftime('%Y-%m-%d %H:%M:%S')}")
+    except Exception as e:
+        logger_Alerta.exception(f"Erro ao marcar item como recebido: {e}")
+    return
+
+if __name__ == "__main__":
+    # Teste rápido das funções
+    df_carrinho = carrinho_full_filtrado()
+    print(df_carrinho.head())

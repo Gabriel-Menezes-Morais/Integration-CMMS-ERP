@@ -29,6 +29,19 @@
     letter-spacing: 2px;
 }
 
+#historico-de-necessidades{
+    text-align: center;
+    border: 1px solid;
+    border-color: rgba(1, 65, 128, 0.2);
+    border-radius: 20px;
+    padding: 5px;
+    margin-top: 5%;
+    margin-left: 10%;
+    margin-right: 10%;
+    margin-bottom: 1%;
+    letter-spacing: 2px;
+}
+
 .stAppDeployButton > button{
     visibility: hidden;
 }

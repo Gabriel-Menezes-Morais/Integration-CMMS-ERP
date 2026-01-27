@@ -38,7 +38,7 @@ def _create_session_with_retries(retries=3, backoff_factor=0.3, status_forcelist
     session.mount("http://", adapter)
     return session
 
-def extract():
+def cadastrar_aut():
 
     url = os.getenv("ENDPOINT_AUTENTICACAO")
     TOKEN = os.getenv("TOKEN_AUTENTICACAO")
@@ -136,13 +136,14 @@ def edit_movest(ID, CODIGO, QTD):
     if not token_mov:
         logger_ALERTA.error("TOKEN não definido nas variáveis de ambiente.")
         raise ValueError("TOKEN não definido")
+    
     named_tuple = time.localtime()
-    # Formato como YYYY-MM-DD, HH:MM
     time_string = time.strftime("%Y-%m-%d %H:%M", named_tuple)
-    payload = { #TESTAR SE PRECISA COLOCAR INFOS ANTERIORES
+    
+    payload = { 
         "token": token_mov,
         "id": ID,
-        "data_recebido":time_string,
+        "data_recebido": time_string,
         "materiais": [
             {
                 "codigo": CODIGO,
@@ -158,8 +159,6 @@ def edit_movest(ID, CODIGO, QTD):
     try:
         prepped = Request('POST', url_mov, json=payload, headers=headers).prepare()
         response = s.send(prepped, timeout=10)
-
-        # Lança exceção para status codes 4xx/5xx
         response.raise_for_status()
 
         try:
@@ -168,9 +167,13 @@ def edit_movest(ID, CODIGO, QTD):
             logger_ALERTA.exception("Erro ao decodificar JSON da resposta: %s", e)
             return
 
-
         logger_SIMPLES.info(status)
         logger_SIMPLES.info(response.status_code)
+        
+        # Atualiza o banco local com a data de recebimento
+        from database.funcoesBD import marcar_como_recebido
+        marcar_como_recebido(CODIGO)
+        
         return
 
     except requests.exceptions.Timeout as e:

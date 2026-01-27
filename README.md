@@ -35,7 +35,9 @@ sistema_AutNec/
 │   └── Transformacao.py  # General data transformation
 ├── images/                # Application images
 ├── pages/                 # Streamlit pages
-│   └── Cadastrar_Item.py  # Material registration (PDM)
+│   ├── Cadastrar_Item.py  # Material registration (PDM)
+│   ├── Gerenciar_Taxonomia.py  # Taxonomy management
+│   └── Histórico_de_Necessidades.py  # Purchase needs history
 ├── services/              # External API integrations
 │   ├── integra_API_Cadastro.py  # API for item registration
 │   ├── integra_API_ListarPecas.py  # API for parts listing
@@ -146,8 +148,12 @@ Structured logging configuration for different alert levels.
 - **Cart**: Management of items for purchase
 - **Monitoring**: Automatic stock verification
 - **PDM Registration**: Structured item creation with auto-generated codes and description preview
+- **Taxonomy Management**: Edit and maintain material taxonomy and classification structures
+- **Needs History**: View and track historical records of all purchase orders and requirements
 
-### Material Registration (Cadastrar_Item.py)
+### Available Pages
+
+#### 1. Cadastrar_Item.py (Material Registration - PDM)
 
 Steps to register a new item via the PDM page:
 1. Choose a base family or create a new one ("Base Name"), then create a new family if needed.
@@ -156,6 +162,25 @@ Steps to register a new item via the PDM page:
 4. Fill in the technical specifications requested for the selected family/type and choose the unit of measure.
 5. Review the auto-generated description preview and the next sequential code (mntXXXX).
 6. Submit to register the item: it calls the external registration API, persists in the ERP via `CadastrarBD`, and stores a local JSON history in `itens_cadastrados.json`. Existing taxonomy lives in `taxonomia_materiais.json` and is extended on the fly by the page.
+
+#### 2. Gerenciar_Taxonomia.py (Taxonomy Management)
+
+Manage the material taxonomy system:
+- View existing material families and types
+- Add new families and types to the taxonomy structure
+- Define technical specifications and variants for each type
+- Maintain consistency across the classification system
+- Update and maintain the `taxonomia_materiais.json` file
+
+#### 3. Histórico_de_Necessidades.py (Purchase Needs History)
+
+Track and review purchase order history:
+- View all historical purchase orders and demands
+- Filter by date, item, status, and other criteria
+- Access detailed information about past purchases
+- Monitor order fulfillment and receipt status
+- Generate reports based on historical data
+- Track `Data_Recebimento` (receipt dates) for items
 
 ## ETL Processes
 

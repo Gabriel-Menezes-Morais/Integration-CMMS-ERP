@@ -96,7 +96,3 @@ def Cadastrar(Item_Cadastro):
             s.close()
         except Exception:
             pass
-
-
-if __name__ == "__main__":
-    Cadastrar()
