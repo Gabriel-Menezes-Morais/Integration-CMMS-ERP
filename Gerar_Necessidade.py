@@ -224,6 +224,9 @@ if st.session_state["authentication_status"]:
                         if not item_nome:
                             continue
                         st.checkbox(item_nome, key=f"check_{item}")
+                        #Criar uma opção para inserir observações relevantes para o comprador
+                        if st.session_state[f"check_{item}"]:
+                            st.text_area("Observações (opcional):", key=f"obs_{item}", height=50)
                     with col2:
                         st.write("Cód.: {}".format(item))
                     with col3:
@@ -252,15 +255,18 @@ if st.session_state["authentication_status"]:
                     # Pegamos as chaves dinâmicas
                     chave_checkbox = f"check_{item}"
                     chave_slider = f"slider_{item}"
+                    chave_obs = f"obs_{item}"
                     
                     # Verificamos se a checkbox foi marcada
                     if st.session_state[chave_checkbox]:
                         # Guardamos os dados
                         quantidade = st.session_state[chave_slider]
-                        
+                        observacoes = st.session_state.get(chave_obs, "")
+
                         itens_para_mover.append([
                             item,
-                            quantidade
+                            quantidade,
+                            observacoes
                         ])
                         # Deletamos as chaves para resetar o formulário
                         del st.session_state[chave_checkbox]
@@ -269,7 +275,7 @@ if st.session_state["authentication_status"]:
                 if itens_para_mover:
                     # Reseta a barra de busca
                     st.session_state.reset_input_busca = True
-                    # Adiciona os itens à lista de pedidos
+                    # Adiciona os itens à lista de pedidos, como também a observação, se houver
                     compra_item(itens_para_mover)
                     
                     logger_info.info(f"Itens {', '.join([f'{x[0]} (qtd: {x[1]})' for x in itens_para_mover])} adicionados à tabela de necessidades no banco de dados.")

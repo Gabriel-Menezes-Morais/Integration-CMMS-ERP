@@ -82,9 +82,9 @@ def compra_item(datas):
     try:
         engine = conexao()  # Tenta estabelecer a conexão
 
-        sql_insert = "INSERT INTO dbo.CadNecComCOPY (CodProCOPY, Qtd) VALUES (:cod, :qtd)"
+        sql_insert = "INSERT INTO dbo.CadNecComCOPY (CodProCOPY, Qtd, OBS) VALUES (:cod, :qtd, :obs)"
 
-        parametros = [{"cod": item[0], "qtd": item[1]} for item in datas]
+        parametros = [{"cod": item[0], "qtd": item[1], "obs": item[2]} for item in datas]
 
         with engine.begin() as conn:
             conn.execute(text(sql_insert), parametros)
